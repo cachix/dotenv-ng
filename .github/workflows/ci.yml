@@ -1,0 +1,94 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+      - ci
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Configure the Devenv cache
+        uses: cachix/cachix-action@v16
+        with:
+          name: devenv
+
+      - name: Install Devenv
+        run: nix profile add nixpkgs#devenv
+
+      - name: Run checks
+        run: devenv tasks run ci:check
+
+      - name: Generate coverage
+        if: runner.os == 'Linux'
+        run: devenv tasks run ci:coverage
+
+      - name: Archive code coverage results
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: code_coverage_result
+          path: cobertura.xml
+
+      - name: Upload to codecov.io
+        if: runner.os == 'Linux' && github.event_name == 'push'
+        uses: codecov/codecov-action@v5
+        with:
+          files: cobertura.xml
+
+      - name: Note PR number
+        if: runner.os == 'Linux' && github.event_name == 'pull_request'
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+        run: |
+          mkdir -p ./pr
+          printf '%s' "$PR_NUMBER" > ./pr/pr_number
+
+      - name: Save PR number
+        if: runner.os == 'Linux' && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr_number
+          path: pr/
+
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Minimum Supported Rust Version
+        rust: [stable, nightly, 1.74.0]
+
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          target: x86_64-pc-windows-msvc
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ matrix.rust }}_windows-latest
+
+      - name: Build tests
+        run: cargo test --workspace --all-features --no-run
+
+      - name: Run tests
+        run: cargo test --workspace --all-features
