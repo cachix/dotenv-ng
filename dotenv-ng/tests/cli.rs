@@ -173,7 +173,7 @@ fn substitution_and_precedence_use_case_insensitive_environment_names() {
                 "cmd.exe",
                 "/D",
                 "/C",
-                "<nul set /p =%DOTENV_NG_WINDOWS_CASE%^|%DOTENV_NG_WINDOWS_DERIVED% & exit /b 0",
+                "<nul set /p =%DOTENV_NG_WINDOWS_CASE%^|%DOTENV_NG_WINDOWS_DERIVED%&exit /b 0",
             ])
             .env("Dotenv_Ng_Windows_Case", "parent")
             .output()
