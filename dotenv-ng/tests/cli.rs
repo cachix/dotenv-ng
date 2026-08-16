@@ -73,7 +73,7 @@ fn missing_file_is_required_by_default() {
 fn a_single_quoted_command_is_split() {
     let executable = env!("CARGO_BIN_EXE_dotenv-ng");
     let missing_file = missing_env_file("quoted");
-    let command = format!("{executable} --version");
+    let command = format!("{} --version", shell_words::quote(executable));
     let output = Command::new(executable)
         .args([
             "--file",
@@ -173,7 +173,7 @@ fn substitution_and_precedence_use_case_insensitive_environment_names() {
                 "cmd.exe",
                 "/D",
                 "/C",
-                "<nul set /p =%DOTENV_NG_WINDOWS_CASE%^|%DOTENV_NG_WINDOWS_DERIVED%",
+                "<nul set /p =%DOTENV_NG_WINDOWS_CASE%^|%DOTENV_NG_WINDOWS_DERIVED% & exit /b 0",
             ])
             .env("Dotenv_Ng_Windows_Case", "parent")
             .output()
